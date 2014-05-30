@@ -33,6 +33,50 @@ Now you are ready to run:
 I had to find mine by viewing the source over at the [desktop web client](https://client.pushover.net). At the time they
 were at the bottom of the file in the variables `Pushover.deviceId` and `Pushover.userSecret`
 
+### Running as a service on OSX
+
+I use `launchd` to keep this thing running and in the background.
+
+Install the plist below in `~/Library/LaunchAgents/com.github.nbrownus.pushover-desktop-client.plist`
+
+Make sure to replace `{YOUR_USERNAME_HERE}` with your username
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.github.nbrownus.pushover-desktop-client.plist</string>
+        <key>OnDemand</key>
+        <false/>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/node</string>
+          <string>/usr/local/share/npm/bin/pushover-desktop-client</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>ServiceDescription</key>
+        <string>Pushover Desktop Client</string>
+        <key>ServiceIPC</key>
+        <false/>
+        <key>StandardErrorPath</key>
+        <string>/Users/{YOUR_USERNAME_HERE}/Library/Logs/PushoverDesktopClient/output.log</string>
+        <key>StandardOutPath</key>
+        <string>/Users/{YOUR_USERNAME_HERE}/Library/Logs/PushoverDesktopClient/output.log</string>
+      </dict>
+    </plist>
+
+Make sure the log directory exists
+
+    mkdir -p /Users/nate/Library/Logs/PushoverDesktopClient/
+
+Then load the plist
+
+    launchctl load ~/Library/LaunchAgents/com.github.nbrownus.pushover-desktop-client.plist
+
+All done!
+
 ### Known Issues
 
 `terminal-notifier` on some versions of OSX 10.9 will not display the specified icon
