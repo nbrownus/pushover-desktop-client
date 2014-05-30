@@ -18,7 +18,7 @@ Then set up your settings file at `~/.pdc-settings.json`
     {
         "secret": "secret obtained from pushover.net"
       , "deviceId": "device id obtained from pushover.net"
-      , "imageCache": "path to a directory to store app iconds"
+      , "imageCache": "path to a directory to store app icons"
     }
 
 You can override the location of the settings file with the `PUSHOVER_SETTINGS_PATH` environment variable.

@@ -138,12 +138,13 @@ var notify = function (messages) {
         fetchImage(icon, function (imageFile) {
             var payload = { appIcon: imageFile }
 
-            payload.title = message.title || 'Pushover'
+            payload.title = message.title || message.app
 
             if (message.message) {
                 payload.message = message.message
             }
 
+            console.log('Sending notification for', message.id)
             notifier.notify(payload)
         })
     })
@@ -260,7 +261,16 @@ connect()
  *
  * @typedef {Object} PushoverMessage
  *
- *
+ * @property {Number} id Unique ID of the message
+ * @property {String} message Actual message to be displayed
+ * @property {String} app Name of the app that send the message
+ * @property {Number} aid Id of the app that sent the message
+ * @property {String} icon Name of the icon for the app that sent the message.
+ *      Seems to always be a png on Pushovers servers
+ * @property {Number} date Unix time stamp representing the date the message was sent
+ * @property {Number} priority Message priority
+ * @property {Number} acked Whether or not the message has been acked by some other client
+ * @property {Number} umid No idea
  */
 
 /**
