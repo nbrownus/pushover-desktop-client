@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 var ws = require('ws')
+  , fs = require('fs')
+  , mkdirp = require('mkdirp')
   , querystring = require('querystring')
   , https = require('https')
   , Notification = require('node-notifier')
   , path = require('path')
   , notifier = new Notification()
-  , iconRoot = 'https://client.pushover.net/icons'
+  , iconHost = 'client.pushover.net'
   , apiHost = 'api.pushover.net'
   , apiPath = '/1'
   , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || path.resolve(process.env.HOME, './.pdc-settings.json')
@@ -21,6 +23,7 @@ try {
 
 settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
 settings.secret = process.env.PUSHOVER_SECRET || settings.secret
+settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache
 
 if (!settings.deviceId || !settings.secret) {
     console.error('A secret and deviceId must be provided!')
@@ -28,9 +31,22 @@ if (!settings.deviceId || !settings.secret) {
     process.exit(1)
 }
 
+if (settings.imageCache) {
+    console.log('Initializing image cache directory', settings.imageCache)
+    mkdirp.sync(settings.imageCache, '0755')
+} else {
+    console.log('No image cache directory specified')
+}
+
+/**
+ * Handles the websocket connection
+ * Sets up triggered message refreshing as well as an initial refresh to ensure we haven't missed anything
+ */
 var connect = function () {
     var client = new ws('wss://client.pushover.net/push')
+
     client.on('open', function () {
+        refreshMessages()
         console.log('Websocket client connected, waiting for new messages')
         client.send('login:' + settings.deviceId + ':' + settings.secret + '\n')
     })
@@ -53,6 +69,10 @@ var connect = function () {
     })
 }
 
+/**
+ * Makes an https request to Pushover to get all messages we haven't seen yet
+ * Notifications will be generated for any new messages
+ */
 var refreshMessages = function () {
     console.log('Refreshing messages')
     var options = {
@@ -94,6 +114,12 @@ var refreshMessages = function () {
     request.end()
 }
 
+/**
+ * Takes a list of message, prepares them, and sends to the notify subsystem
+ * After all notifications are processed updateHead is called to clear them from Pushover for the configured deviceId
+ *
+ * @param {PushoverMessage[]} messages A list of pushover message objects
+ */
 var notify = function (messages) {
     var lastMessage
 
@@ -102,22 +128,24 @@ var notify = function (messages) {
         var icon
 
         if (message.icon) {
-            icon = '/' + message.icon + '.png'
+            icon = message.icon + '.png'
         } else if (message.aid === 1) {
-            icon = '/pushover.png'
+            icon = 'pushover.png'
         } else {
-            icon = '/default.png'
+            icon = 'default.png'
         }
 
-        var payload = { appIcon: iconRoot + icon }
+        fetchImage(icon, function (imageFile) {
+            var payload = { appIcon: imageFile }
 
-        payload.title = message.title || 'Pushover'
+            payload.title = message.title || 'Pushover'
 
-        if (message.message) {
-            payload.message = message.message
-        }
+            if (message.message) {
+                payload.message = message.message
+            }
 
-        notifier.notify(payload)
+            notifier.notify(payload)
+        })
     })
 
     if (lastMessage) {
@@ -125,8 +153,69 @@ var notify = function (messages) {
     }
 }
 
+/**
+ * Fetches an image from Pushover and stuffs it in a cache dir
+ * If the image already exists in the cache dir the fetch is skipped
+ *
+ * @param {String} imageName The name of the image, from the message object
+ * @param {FetchCallback} callback A function to call once this has completed, the image path is provided or false if no
+ *      image could be fetched
+ */
+var fetchImage = function (imageName, callback) {
+    if (!settings.imageCache) {
+        return callback(false)
+    }
+
+    var imageFile = path.join(settings.imageCache, imageName)
+    if (fs.existsSync(imageFile)) {
+        return callback(imageFile)
+    }
+
+    console.log('Caching image for', imageName)
+
+    var options = {
+        host: iconHost
+      , method: 'GET'
+      , path: '/icons/' + imageName
+    }
+
+    var request = https.request(options, function (response) {
+        try {
+            response.pipe(fs.createWriteStream(imageFile))
+        } catch (error) {
+            console.error('Error while caching image', imageName)
+            console.error(error.stack || error)
+            return callback(false)
+        }
+
+        response.on('end', function () {
+            if (response.statusCode !== 200) {
+                console.error('Error while caching image', imageName)
+                return callback(false)
+            }
+
+            callback(imageFile)
+        })
+
+    })
+
+    request.on('error', function (error) {
+        console.error('Error while caching image', imageName)
+        console.error(error.stack || error)
+        callback(false)
+    })
+
+    request.end()
+}
+
+/**
+ * Updates the last seen message with Pushover
+ * Any messages below this id will *not* be re-synced
+ *
+ * @param {PushoverMessage} message The last message received from an update
+ */
 var updateHead = function (message) {
-    console.log('Updating head position')
+    console.log('Updating head position to', message.id)
 
     var options = {
         host: apiHost
@@ -156,12 +245,26 @@ var updateHead = function (message) {
     })
 
     request.write(querystring.stringify({
-        secret: settings.secret,
-        message: message.id
+        secret: settings.secret
+      , message: message.id
     }) + '\n')
 
     request.end()
 }
 
 connect()
-refreshMessages()
+
+/**
+ * A Pushover message
+ * Contains everything needed to prepare and display a notification
+ *
+ * @typedef {Object} PushoverMessage
+ *
+ *
+ */
+
+/**
+ * @callback FetchCallback
+ *
+ * @param {String|boolean} Either the path to the image on disk or false if no image could be provided
+ */

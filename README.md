@@ -18,11 +18,13 @@ Then set up your settings file at `~/.pdc-settings.json`
     {
         "secret": "secret obtained from pushover.net"
       , "deviceId": "device id obtained from pushover.net"
+      , "imageCache": "path to a directory to store app iconds"
     }
 
 You can override the location of the settings file with the `PUSHOVER_SETTINGS_PATH` environment variable.
 
-Alternatively you can use `PUSHOVER_DEVICE_ID` and `PUSHOVER_SECRET` instead of using the settings file at all.
+Alternatively you can use `PUSHOVER_DEVICE_ID`, `PUSHOVER_SECRET`, `PUSHOVER_IMAGE_CACHE` instead of using the settings
+file at all.
 
 Now you are ready to run:
 
@@ -76,10 +78,6 @@ Then load the plist
     launchctl load ~/Library/LaunchAgents/com.github.nbrownus.pushover-desktop-client.plist
 
 All done!
-
-### Known Issues
-
-`terminal-notifier` on some versions of OSX 10.9 will not display the specified icon
 
 ### TODO:
 
