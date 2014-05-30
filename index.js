@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var ws = require('ws')
   , querystring = require('querystring')
   , https = require('https')
