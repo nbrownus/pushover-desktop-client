@@ -3,10 +3,15 @@
   , "version": "1.0.0"
   , "description": "Pushover client that displays notifications on the desktop"
   , "keywords": [ "pushover", "desktop", "notification", "notify"]
-  , "author": "Nate Brown <nbrown.us@gmail.com>"
+  , "author": {
+        "name": "Nate Brown"
+      , "email": "nbrown.us@gmail.com"
+    }
+  , "repository": "git://github.com/nbrownus/pushover-desktop-client"
   , "bin": {
         "pushover-desktop-client": "./index.js"
     }
+  , "license": "MIT"
   , "engines": {
         "node": ">=0.8.0"
     }

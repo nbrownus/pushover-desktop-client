@@ -9,9 +9,9 @@ to paying to enable the [desktop service](https://pushover.net/clients/desktop) 
 
 ### Using it
 
-First install `pushover-desktop-client` with `npm`
+First install `pushover-desktop-client` globally with `npm`
 
-    npm install pushover-desktop-client
+    npm install -g pushover-desktop-client
 
 Then set up your settings file at `~/.pdc-settings.json`
 
