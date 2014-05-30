@@ -69,7 +69,7 @@ Make sure to replace `{YOUR_USERNAME_HERE}` with your username
 
 Make sure the log directory exists
 
-    mkdir -p /Users/nate/Library/Logs/PushoverDesktopClient/
+    mkdir -p ~/Library/Logs/PushoverDesktopClient/
 
 Then load the plist
 
