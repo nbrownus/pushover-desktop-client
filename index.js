@@ -7,11 +7,12 @@ var ws = require('ws')
   , https = require('https')
   , Notification = require('node-notifier')
   , path = require('path')
+  , xdg = require('xdg')
   , notifier = new Notification()
   , iconHost = 'client.pushover.net'
   , apiHost = 'api.pushover.net'
   , apiPath = '/1'
-  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || path.resolve(process.env.HOME, './.pdc-settings.json')
+  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover/settings.json')
   , settings = {}
 
 try {
