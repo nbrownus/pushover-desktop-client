@@ -5,8 +5,30 @@ var ws = require('ws')
   , Notification = require('node-notifier')
   , path = require('path')
 
+/**
+ * Handles everything for showing Pushover notifications, just call #connect()
+ *
+ * @param {Object} settings Instance configuration
+ * @param {String} settings.deviceId The device id for your Pushover notification stream
+ * @param {String} settings.secret The secret for your Pushover notification stream
+ * @param {String} [settings.imageCache=null] Path to the image cache directory, used for app icons
+ * @param {String} [settings.wsHost='wss://client.pushover.net/push'] Pushover websocket host to connect to
+ * @param {String} [settings.iconHost='client.pushover.net'] Pushover icon host
+ * @param {String} [settings.apiHost='api.pushover.net'] Pushover API host
+ * @param {String} [settings.apiPath='/1'] Pushover API version, mostly
+ * @param {String} [settings.notifier=Notification] Notification subsystem to use, mostly here for test support
+ * @param {String} [settings.https=https] https lib to use, mostly here for test support
+ * @param {String} [settings.logger=console] logger to use, mostly here for test support
+ *
+ * @constructor
+ */
 var Client = function (settings) {
     this.settings = settings
+
+    this.settings.wsHost = settings.wsHost || 'wss://client.pushover.net/push'
+    this.settings.iconHost = settings.iconHost || 'client.pushover.net'
+    this.settings.apiHost = settings.apiHost || 'api.pushover.net'
+    this.settings.apiPath = settings.apiPath || '/1'
 
     this.notifier = new Notification()
     this.https = settings.https || https
