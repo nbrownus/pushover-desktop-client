@@ -12,7 +12,7 @@ var ws = require('ws')
   , iconHost = 'client.pushover.net'
   , apiHost = 'api.pushover.net'
   , apiPath = '/1'
-  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover/settings.json')
+  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json')
   , settings = {}
 
 try {
@@ -24,7 +24,7 @@ try {
 
 settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
 settings.secret = process.env.PUSHOVER_SECRET || settings.secret
-settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover')
+settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover-dc')
 
 if (!settings.deviceId || !settings.secret) {
     console.error('A secret and deviceId must be provided!')
