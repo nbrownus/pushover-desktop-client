@@ -37,6 +37,11 @@ Client.prototype.connect = function () {
         if (message === '!') {
             self.logger.log('Got new message event')
             return self.refreshMessages()
+
+        //Keep alive message
+        } else if (message === '#') {
+            //TODO: Reset keep alive timer
+            return
         }
 
         self.logger.error('Unknown message:', message)
