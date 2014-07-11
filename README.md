@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nbrownus/pushover-desktop-client.svg)](https://travis-ci.org/nbrownus/pushover-desktop-client)
+
 ### About
 
 `pushover-desktop-client` is a tool written in [node.js](https://node.js) to display [Pushover](https://pushover.net)
