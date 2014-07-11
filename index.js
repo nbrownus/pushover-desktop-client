@@ -59,6 +59,10 @@ var connect = function () {
             console.log('Got new message event')
             return refreshMessages()
         }
+        //Keep-alive
+        else if (message === '#') {
+            return
+        }
 
         console.error('Unknown message:', message)
     })
