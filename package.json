@@ -19,10 +19,10 @@
         "test": "make test"
     }
   , "dependencies": {
-        "ws": "0.4.x"
-      , "node-notifier": "3.0.x"
-      , "mkdirp": "0.5.x"
-      , "xdg": "0.1.x"
+        "ws": "0.4.31"
+      , "node-notifier": "3.0.6"
+      , "mkdirp": "0.5.0"
+      , "xdg": "0.1.1"
     }
   , "devDependencies": {
         "ppunit": "1.0.0"
