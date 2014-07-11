@@ -24,7 +24,7 @@ try {
 
 settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
 settings.secret = process.env.PUSHOVER_SECRET || settings.secret
-settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache
+settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover')
 
 if (!settings.deviceId || !settings.secret) {
     console.error('A secret and deviceId must be provided!')
@@ -32,12 +32,8 @@ if (!settings.deviceId || !settings.secret) {
     process.exit(1)
 }
 
-if (settings.imageCache) {
-    console.log('Initializing image cache directory', settings.imageCache)
-    mkdirp.sync(settings.imageCache, '0755')
-} else {
-    console.log('No image cache directory specified')
-}
+console.log('Initializing image cache directory', settings.imageCache)
+mkdirp.sync(settings.imageCache, '0755')
 
 /**
  * Handles the websocket connection
