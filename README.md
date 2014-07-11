@@ -13,12 +13,11 @@ First install `pushover-desktop-client` globally with `npm`
 
     npm install -g pushover-desktop-client
 
-Then set up your settings file at `~/.pdc-settings.json`
+Then set up your settings file at `~/.config/pushover-dc/settings.json`
 
     {
         "secret": "secret obtained from pushover.net"
       , "deviceId": "device id obtained from pushover.net"
-      , "imageCache": "path to a directory to store app icons"
     }
 
 You can override the location of the settings file with the `PUSHOVER_SETTINGS_PATH` environment variable.
