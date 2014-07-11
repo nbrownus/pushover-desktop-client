@@ -19,5 +19,6 @@
         "ws": "0.4.x"
       , "node-notifier": "3.0.x"
       , "mkdirp": "0.5.x"
+      , "xdg": "0.1.x"
     }
 }

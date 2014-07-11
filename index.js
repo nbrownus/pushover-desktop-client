@@ -7,11 +7,12 @@ var ws = require('ws')
   , https = require('https')
   , Notification = require('node-notifier')
   , path = require('path')
+  , xdg = require('xdg')
   , notifier = new Notification()
   , iconHost = 'client.pushover.net'
   , apiHost = 'api.pushover.net'
   , apiPath = '/1'
-  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || path.resolve(process.env.HOME, './.pdc-settings.json')
+  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover/settings.json')
   , settings = {}
 
 try {
@@ -23,7 +24,7 @@ try {
 
 settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
 settings.secret = process.env.PUSHOVER_SECRET || settings.secret
-settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache
+settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover')
 
 if (!settings.deviceId || !settings.secret) {
     console.error('A secret and deviceId must be provided!')
@@ -31,12 +32,8 @@ if (!settings.deviceId || !settings.secret) {
     process.exit(1)
 }
 
-if (settings.imageCache) {
-    console.log('Initializing image cache directory', settings.imageCache)
-    mkdirp.sync(settings.imageCache, '0755')
-} else {
-    console.log('No image cache directory specified')
-}
+console.log('Initializing image cache directory', settings.imageCache)
+mkdirp.sync(settings.imageCache, '0755')
 
 /**
  * Handles the websocket connection
