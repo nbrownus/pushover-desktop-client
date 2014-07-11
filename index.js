@@ -1,68 +1,50 @@
-#!/usr/bin/env node
-
 var ws = require('ws')
   , fs = require('fs')
-  , mkdirp = require('mkdirp')
   , querystring = require('querystring')
   , https = require('https')
   , Notification = require('node-notifier')
   , path = require('path')
-  , xdg = require('xdg')
-  , notifier = new Notification()
-  , iconHost = 'client.pushover.net'
-  , apiHost = 'api.pushover.net'
-  , apiPath = '/1'
-  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json')
-  , settings = {}
 
-try {
-    console.log('Attempting to load settings from', settingsPath)
-    settings = require(settingsPath)
-} catch (error) {
-    //Ignoring the error, hopefully we have env vars
+var Client = function (settings) {
+    this.settings = settings
+
+    this.notifier = new Notification()
+    this.https = settings.https || https
+    this.logger = settings.logger || console
 }
 
-settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
-settings.secret = process.env.PUSHOVER_SECRET || settings.secret
-settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover-dc')
-
-if (!settings.deviceId || !settings.secret) {
-    console.error('A secret and deviceId must be provided!')
-    console.error('View the README at https://github.com/nbrownus/pushover-desktop-client for more info')
-    process.exit(1)
-}
-
-console.log('Initializing image cache directory', settings.imageCache)
-mkdirp.sync(settings.imageCache, '0755')
+module.exports = Client
 
 /**
  * Handles the websocket connection
  * Sets up triggered message refreshing as well as an initial refresh to ensure we haven't missed anything
  */
-var connect = function () {
-    var client = new ws('wss://client.pushover.net/push')
+Client.prototype.connect = function () {
+    var self = this
 
-    client.on('open', function () {
-        refreshMessages()
-        console.log('Websocket client connected, waiting for new messages')
-        client.send('login:' + settings.deviceId + ':' + settings.secret + '\n')
+    self.wsClient = new ws(self.settings.wsHost)
+
+    self.wsClient.on('open', function () {
+        self.refreshMessages()
+        self.logger.log('Websocket client connected, waiting for new messages')
+        self.wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.secret + '\n')
     })
 
-    client.on('message', function (event) {
+    self.wsClient.on('message', function (event) {
         var message = event.toString('utf8')
 
         //New message
         if (message === '!') {
-            console.log('Got new message event')
-            return refreshMessages()
+            self.logger.log('Got new message event')
+            return self.refreshMessages()
         }
 
-        console.error('Unknown message:', message)
+        self.logger.error('Unknown message:', message)
     })
 
-    client.on('close', function () {
-        console.log('Websocket connection closed, reconnecting')
-        connect()
+    self.wsClient.on('close', function () {
+        self.logger.log('Websocket connection closed, reconnecting')
+        self.connect()
     })
 }
 
@@ -70,15 +52,22 @@ var connect = function () {
  * Makes an https request to Pushover to get all messages we haven't seen yet
  * Notifications will be generated for any new messages
  */
-var refreshMessages = function () {
-    console.log('Refreshing messages')
+Client.prototype.refreshMessages = function () {
+    var self = this
+
+    self.logger.log('Refreshing messages')
+
+
     var options = {
-        host: apiHost
+        host: self.settings.apiHost
       , method: 'GET'
-      , path: apiPath + '/messages.json?' + querystring.stringify({ secret: settings.secret, device_id: settings.deviceId })
+      , path: self.settings.apiPath + '/messages.json?' + querystring.stringify({
+            secret: self.settings.secret
+          , device_id: self.settings.deviceId
+        })
     }
 
-    var request = https.request(options, function (response) {
+    var request = self.https.request(options, function (response) {
         var finalData = ''
 
         response.on('data', function (data) {
@@ -87,25 +76,25 @@ var refreshMessages = function () {
 
         response.on('end', function () {
             if (response.statusCode !== 200) {
-                console.error('Error while refreshing messages')
-                console.error(finalData)
+                self.logger.error('Error while refreshing messages')
+                self.logger.error(finalData)
                 return
             }
 
             try {
                 var payload = JSON.parse(finalData)
-                notify(payload.messages)
+                self.notify(payload.messages)
             } catch (error) {
-                console.error('Failed to parse message payload')
-                console.error(error.stack || error)
+                self.logger.error('Failed to parse message payload')
+                self.logger.error(error.stack || error)
             }
         })
 
     })
 
     request.on('error', function (error) {
-        console.error('Error while refreshing messages')
-        console.error(error.stack || error)
+        self.logger.error('Error while refreshing messages')
+        self.logger.error(error.stack || error)
     })
 
     request.end()
@@ -117,7 +106,7 @@ var refreshMessages = function () {
  *
  * @param {PushoverMessage[]} messages A list of pushover message objects
  */
-var notify = function (messages) {
+Client.prototype.notify = function (messages) {
     var lastMessage
 
     messages.forEach(function (message) {
@@ -132,7 +121,7 @@ var notify = function (messages) {
             icon = 'default.png'
         }
 
-        fetchImage(icon, function (imageFile) {
+        self.fetchImage(icon, function (imageFile) {
             var payload = { appIcon: imageFile }
 
             payload.title = message.title || message.app
@@ -141,13 +130,13 @@ var notify = function (messages) {
                 payload.message = message.message
             }
 
-            console.log('Sending notification for', message.id)
-            notifier.notify(payload)
+            self.logger.log('Sending notification for', message.id)
+            self.notifier.notify(payload)
         })
     })
 
     if (lastMessage) {
-        updateHead(lastMessage)
+        self.updateHead(lastMessage)
     }
 }
 
@@ -159,36 +148,38 @@ var notify = function (messages) {
  * @param {FetchCallback} callback A function to call once this has completed, the image path is provided or false if no
  *      image could be fetched
  */
-var fetchImage = function (imageName, callback) {
-    if (!settings.imageCache) {
+Client.prototype.fetchImage = function (imageName, callback) {
+    var self = this
+
+    if (!self.settings.imageCache) {
         return callback(false)
     }
 
-    var imageFile = path.join(settings.imageCache, imageName)
+    var imageFile = path.join(self.settings.imageCache, imageName)
     if (fs.existsSync(imageFile)) {
         return callback(imageFile)
     }
 
-    console.log('Caching image for', imageName)
+    self.logger.log('Caching image for', imageName)
 
     var options = {
-        host: iconHost
+        host: self.settings.iconHost
       , method: 'GET'
       , path: '/icons/' + imageName
     }
 
-    var request = https.request(options, function (response) {
+    var request = self.https.request(options, function (response) {
         try {
             response.pipe(fs.createWriteStream(imageFile))
         } catch (error) {
-            console.error('Error while caching image', imageName)
-            console.error(error.stack || error)
+            self.logger.error('FS error while caching image', imageName)
+            self.logger.error(error.stack || error)
             return callback(false)
         }
 
         response.on('end', function () {
             if (response.statusCode !== 200) {
-                console.error('Error while caching image', imageName)
+                self.logger.error('HTTP error while caching image', imageName, 'statusCode:', response.statusCode)
                 return callback(false)
             }
 
@@ -198,8 +189,8 @@ var fetchImage = function (imageName, callback) {
     })
 
     request.on('error', function (error) {
-        console.error('Error while caching image', imageName)
-        console.error(error.stack || error)
+        self.logger.error('Request error while caching image', imageName)
+        self.logger.error(error.stack || error)
         callback(false)
     })
 
@@ -212,16 +203,18 @@ var fetchImage = function (imageName, callback) {
  *
  * @param {PushoverMessage} message The last message received from an update
  */
-var updateHead = function (message) {
-    console.log('Updating head position to', message.id)
+Client.prototype.updateHead = function (message) {
+    var self = this
+
+    self.logger.log('Updating head position to', message.id)
 
     var options = {
-        host: apiHost
+        host: self.settings.apiHost
       , method: 'POST'
-      , path: apiPath + '/devices/' + settings.deviceId + '/update_highest_message.json'
+      , path: self.settings.apiPath + '/devices/' + self.settings.deviceId + '/update_highest_message.json'
     }
 
-    var request = https.request(options, function (response) {
+    var request = self.https.request(options, function (response) {
         var finalData = ''
 
         response.on('data', function (data) {
@@ -230,27 +223,25 @@ var updateHead = function (message) {
 
         response.on('end', function () {
             if (response.statusCode !== 200) {
-                console.error('Error while updating head')
-                console.error(finalData)
+                self.logger.error('Error while updating head')
+                self.logger.error(finalData)
             }
         })
 
     })
 
     request.on('error', function (error) {
-        console.error('Error while refreshing messages')
-        console.error(error.stack || error)
+        self.logger.error('Error while refreshing messages')
+        self.logger.error(error.stack || error)
     })
 
     request.write(querystring.stringify({
-        secret: settings.secret
+        secret: self.settings.secret
       , message: message.id
     }) + '\n')
 
     request.end()
 }
-
-connect()
 
 /**
  * A Pushover message

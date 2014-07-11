@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+
+var PushoverDesktopClient = require('../index.js')
+  , xdg = require('xdg')
+  , mkdirp = require('mkdirp')
+  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json')
+
+try {
+    console.log('Attempting to load settings from', settingsPath)
+    settings = require(settingsPath)
+} catch (error) {
+    //Ignoring the error, hopefully we have env vars
+}
+
+settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
+settings.secret = process.env.PUSHOVER_SECRET || settings.secret
+settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover-dc')
+
+settings.wsHost = settings.wsHost || 'wss://client.pushover.net/push'
+settings.iconHost = settings.iconHost || 'client.pushover.net'
+settings.apiHost = settings.apiHost || 'api.pushover.net'
+settings.apiPath = settings.apiPath || '/1'
+
+if (!settings.deviceId || !settings.secret) {
+    console.error('A secret and deviceId must be provided!')
+    console.error('View the README at https://github.com/nbrownus/pushover-desktop-client for more info')
+    process.exit(1)
+}
+
+console.log('Initializing image cache directory', settings.imageCache)
+mkdirp.sync(settings.imageCache, '0755')
+
+
+var pdc = new PushoverDesktopClient(settings)
+
+pdc.connect()

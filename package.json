@@ -9,7 +9,7 @@
     }
   , "repository": "git://github.com/nbrownus/pushover-desktop-client"
   , "bin": {
-        "pushover-desktop-client": "./index.js"
+        "pushover-desktop-client": "./bin/pushover-desktop-client"
     }
   , "license": "MIT"
   , "engines": {
@@ -20,5 +20,10 @@
       , "node-notifier": "3.0.x"
       , "mkdirp": "0.5.x"
       , "xdg": "0.1.x"
+    }
+  , "devDependencies": {
+        "ppunit": "1.0.0"
+      , "should": "4.0.4"
+      , "istanbul": "0.3.0"
     }
 }
