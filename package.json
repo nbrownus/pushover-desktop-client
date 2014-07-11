@@ -15,6 +15,9 @@
   , "engines": {
         "node": ">=0.8.0"
     }
+  , "scripts": {
+        "test": "make test"
+    }
   , "dependencies": {
         "ws": "0.4.x"
       , "node-notifier": "3.0.x"
