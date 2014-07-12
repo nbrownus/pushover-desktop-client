@@ -16,9 +16,11 @@ var ws = require('ws')
  * @param {String} [settings.iconHost='client.pushover.net'] Pushover icon host
  * @param {String} [settings.apiHost='api.pushover.net'] Pushover API host
  * @param {String} [settings.apiPath='/1'] Pushover API version, mostly
- * @param {String} [settings.notifier=Notification] Notification subsystem to use, mostly here for test support
- * @param {String} [settings.https=https] https lib to use, mostly here for test support
- * @param {String} [settings.logger=console] logger to use, mostly here for test support
+ * @param {Number} [settings.keepAliveTimeout=60000] Time to wait for a keep alive message before considering the
+ *      connection dead, also used for connection attempt rate limiting
+ * @param {Object} [settings.notifier=Notification] Notification subsystem to use, mostly here for test support
+ * @param {Object} [settings.https=https] https lib to use, mostly here for test support
+ * @param {Object} [settings.logger=console] logger to use, mostly here for test support
  *
  * @constructor
  */
@@ -29,6 +31,7 @@ var Client = function (settings) {
     this.settings.iconHost = settings.iconHost || 'client.pushover.net'
     this.settings.apiHost = settings.apiHost || 'api.pushover.net'
     this.settings.apiPath = settings.apiPath || '/1'
+    this.settings.keepAliveTimeout = settings.keepAliveTimeout || 60000
 
     this.notifier = new Notification()
     this.https = settings.https || https
@@ -44,15 +47,22 @@ module.exports = Client
 Client.prototype.connect = function () {
     var self = this
 
-    self.wsClient = new ws(self.settings.wsHost)
+    if (self.wsClient) {
+        return
+    }
 
-    self.wsClient.on('open', function () {
+    var wsClient = new ws(self.settings.wsHost)
+
+    self._lastConnection = Date.now()
+
+    wsClient.on('open', function () {
         self.refreshMessages()
         self.logger.log('Websocket client connected, waiting for new messages')
-        self.wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.secret + '\n')
+        self.resetKeepAlive()
+        wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.secret + '\n')
     })
 
-    self.wsClient.on('message', function (event) {
+    wsClient.on('message', function (event) {
         var message = event.toString('utf8')
 
         //New message
@@ -62,17 +72,62 @@ Client.prototype.connect = function () {
 
         //Keep alive message
         } else if (message === '#') {
-            //TODO: Reset keep alive timer
+            self.resetKeepAlive()
             return
         }
 
         self.logger.error('Unknown message:', message)
+        self.reconnect()
     })
 
-    self.wsClient.on('close', function () {
-        self.logger.log('Websocket connection closed, reconnecting')
-        self.connect()
+    wsClient.on('error', function (error) {
+        self.logger.error('Websocket connection error')
+        self.logger.error(error.stack || error)
+        self.reconnect()
     })
+
+    wsClient.on('close', function () {
+        self.logger.log('Websocket connection closed, reconnecting')
+        self.reconnect()
+    })
+
+    self.wsClient = wsClient
+}
+
+/**
+ * Resets the websocket client termination timer
+ * If the timer isn't reset in time the websocket client is reconnected
+ */
+Client.prototype.resetKeepAlive = function () {
+    var self = this
+
+    clearTimeout(self._keepAlive)
+
+    self._keepAlive = setTimeout(function () {
+        console.error('Did not receive a keep alive message in time, closing connection')
+        self.reconnect()
+    }, self.settings.keepAliveTimeout)
+}
+
+/**
+ * Handles clearing the old websocket client and reconnecting
+ * Avoids spamming the websocket server
+ */
+Client.prototype.reconnect = function () {
+    var self = this
+
+    clearTimeout(self._keepAlive)
+
+    try {
+        self.wsClient.removeAllListeners()
+        self.wsClient.terminate()
+        self.wsClient = null
+    } catch (e) {}
+
+    self._reconnect = setTimeout(function () {
+        clearTimeout(self._reconnect)
+        self.connect()
+    }, self.settings.keepAliveTimeout - (Date.now() - self._lastConnection))
 }
 
 /**
@@ -83,7 +138,6 @@ Client.prototype.refreshMessages = function () {
     var self = this
 
     self.logger.log('Refreshing messages')
-
 
     var options = {
         host: self.settings.apiHost
