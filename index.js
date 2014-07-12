@@ -185,10 +185,11 @@ Client.prototype.refreshMessages = function () {
  * Takes a list of message, prepares them, and sends to the notify subsystem
  * After all notifications are processed updateHead is called to clear them from Pushover for the configured deviceId
  *
- * @param {PushoverMessage[]} messages A list of pushover message objects
+ * @param {Client~PushoverMessage[]} messages A list of pushover message objects
  */
 Client.prototype.notify = function (messages) {
-    var lastMessage
+    var self = this
+      , lastMessage
 
     messages.forEach(function (message) {
         lastMessage = message
@@ -226,7 +227,7 @@ Client.prototype.notify = function (messages) {
  * If the image already exists in the cache dir the fetch is skipped
  *
  * @param {String} imageName The name of the image, from the message object
- * @param {FetchCallback} callback A function to call once this has completed, the image path is provided or false if no
+ * @param {Client~FetchCallback} callback A function to call once this has completed, the image path is provided or false if no
  *      image could be fetched
  */
 Client.prototype.fetchImage = function (imageName, callback) {
@@ -282,7 +283,7 @@ Client.prototype.fetchImage = function (imageName, callback) {
  * Updates the last seen message with Pushover
  * Any messages below this id will *not* be re-synced
  *
- * @param {PushoverMessage} message The last message received from an update
+ * @param {Client~PushoverMessage} message The last message received from an update
  */
 Client.prototype.updateHead = function (message) {
     var self = this
@@ -328,7 +329,7 @@ Client.prototype.updateHead = function (message) {
  * A Pushover message
  * Contains everything needed to prepare and display a notification
  *
- * @typedef {Object} PushoverMessage
+ * @typedef {Object} Client~PushoverMessage
  *
  * @property {Number} id Unique ID of the message
  * @property {String} message Actual message to be displayed
@@ -343,7 +344,7 @@ Client.prototype.updateHead = function (message) {
  */
 
 /**
- * @callback FetchCallback
+ * @callback Client~FetchCallback
  *
  * @param {String|boolean} Either the path to the image on disk or false if no image could be provided
  */
