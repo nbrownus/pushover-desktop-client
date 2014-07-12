@@ -6,8 +6,8 @@
 notifications on your desktop. It uses [node-notifier](https://github.com/mikaelbr/node-notifier) so it should work
 with many different desktop notification providers on many different operating systems.
 
-This project uses the undocumented Pushover websocket API to receive notifications about new notifications. You may need
-to paying to enable the [desktop service](https://pushover.net/clients/desktop) to use this project.
+This project uses the undocumented Pushover websocket API to receive updates about new notifications. You may need
+to pay to enable the [desktop service](https://pushover.net/clients/desktop) to use this project.
 
 ### Using it
 
