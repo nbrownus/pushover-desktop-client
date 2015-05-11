@@ -104,7 +104,7 @@ Client.prototype.resetKeepAlive = function () {
     clearTimeout(self._keepAlive)
 
     self._keepAlive = setTimeout(function () {
-        console.error('Did not receive a keep alive message in time, closing connection')
+        self.logger.error('Did not receive a keep alive message in time, closing connection')
         self.reconnect()
     }, self.settings.keepAliveTimeout)
 }
@@ -188,12 +188,20 @@ Client.prototype.refreshMessages = function () {
  * @param {Client~PushoverMessage[]} messages A list of pushover message objects
  */
 Client.prototype.notify = function (messages) {
-    var self = this
-      , lastMessage
+    var self = this,
+        lastMessage,
+        useMessages = messages
 
-    messages.forEach(function (message) {
+    var next = function () {
+        var message = useMessages.shift(),
+            icon
+
+        if (!message) {
+            self.updateHead(lastMessage)
+            return
+        }
+
         lastMessage = message
-        var icon
 
         if (message.icon) {
             icon = message.icon + '.png'
@@ -203,23 +211,42 @@ Client.prototype.notify = function (messages) {
             icon = 'default.png'
         }
 
-        self.fetchImage(icon, function (imageFile) {
-            var payload = { appIcon: imageFile }
+        try {
+            self.fetchImage(icon, function (imageFile) {
+                var payload = {appIcon: imageFile}
 
-            payload.title = message.title || message.app
+                payload.title = message.title || message.app
 
-            if (message.message) {
-                payload.message = message.message
-            }
+                if (message.message) {
+                    payload.message = message.message
+                }
 
-            self.logger.log('Sending notification for', message.id)
-            self.notifier.notify(payload)
-        })
-    })
+                self.logger.log('Sending notification for', message.id)
 
-    if (lastMessage) {
-        self.updateHead(lastMessage)
+                try {
+                    self.notifier.notify(payload, function (error) {
+                        if (error) {
+                            self.logger.error('Returned error while trying to send the notification')
+                            self.logger.error(error.stack || error)
+                        }
+                    })
+                } catch (error) {
+                    self.logger.error('Caught error while trying to send the notification')
+                    self.logger.error(error.stack || error)
+                    next()
+                    return
+                }
+
+                next()
+            })
+        } catch (error) {
+            self.logger.error('Caught error while trying to fetch the image')
+            self.logger.error(error.stack || error)
+            next()
+        }
     }
+
+    next()
 }
 
 /**
@@ -287,6 +314,10 @@ Client.prototype.fetchImage = function (imageName, callback) {
  */
 Client.prototype.updateHead = function (message) {
     var self = this
+
+    if (!message) {
+        return
+    }
 
     self.logger.log('Updating head position to', message.id)
 
