@@ -9,8 +9,8 @@ var ws = require('ws')
  * Handles everything for showing Pushover notifications, just call #connect()
  *
  * @param {Object} settings Instance configuration
+ * @param {String} settings.userSecret The user secret for your Pushover notification stream
  * @param {String} settings.deviceId The device id for your Pushover notification stream
- * @param {String} settings.secret The secret for your Pushover notification stream
  * @param {String} [settings.imageCache=null] Path to the image cache directory, used for app icons
  * @param {String} [settings.wsHost='wss://client.pushover.net/push'] Pushover websocket host to connect to
  * @param {String} [settings.iconHost='client.pushover.net'] Pushover icon host
@@ -59,7 +59,7 @@ Client.prototype.connect = function () {
         self.refreshMessages()
         self.logger.log('Websocket client connected, waiting for new messages')
         self.resetKeepAlive()
-        wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.secret + '\n')
+        wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.userSecret + '\n')
     })
 
     wsClient.on('message', function (event) {
@@ -143,7 +143,7 @@ Client.prototype.refreshMessages = function () {
         host: self.settings.apiHost
       , method: 'GET'
       , path: self.settings.apiPath + '/messages.json?' + querystring.stringify({
-            secret: self.settings.secret
+            secret: self.settings.userSecret
           , device_id: self.settings.deviceId
         })
     }
@@ -179,6 +179,113 @@ Client.prototype.refreshMessages = function () {
     })
 
     request.end()
+}
+
+/**
+ * Makes an https request to Pushover to get the client secret
+ */
+Client.prototype.login = function (userEmail, userPassword, callback) {
+    var self = this;
+
+    self.logger.log('Performing Login');
+
+    var options = {
+        host: self.settings.apiHost
+      , method: 'POST'
+      , path: self.settings.apiPath + '/users/login.json'
+    };
+    
+    var postData = querystring.stringify({
+        'email' : userEmail,
+        'password' : userPassword
+    });
+
+    var request = self.https.request(options, function (response) {
+        var finalData = '';
+
+        response.on('data', function (data) {
+            finalData += data.toString();
+        });
+
+        response.on('end', function () {
+            if (response.statusCode !== 200) {
+                self.logger.error('Error while logging in');
+                self.logger.error(finalData);
+                return;
+            }
+
+            try {
+                var payload = JSON.parse(finalData);
+                callback(payload);
+            } catch (error) {
+                self.logger.error('Failed to parse message payload');
+                self.logger.error(error.stack || error);
+            }
+        });
+
+    });
+
+    request.on('error', function (error) {
+        self.logger.error('Error while logging in');
+        self.logger.error(error.stack || error);
+    });
+    
+    request.write(postData);
+    request.end();
+}
+
+/**
+ * Makes an https request to Pushover to register the device
+ */
+Client.prototype.register = function (deviceName, callback) {
+    var self = this;
+
+    self.logger.log('Performing Device Registration');
+
+    var options = {
+        host: self.settings.apiHost
+      , method: 'POST'
+      , path: self.settings.apiPath + '/devices.json'
+    };
+    
+    var postData = querystring.stringify({
+        'secret' : self.settings.userSecret,
+        'name' : deviceName,
+        'os' : 'O'
+    });
+
+    var request = self.https.request(options, function (response) {
+        var finalData = '';
+
+        response.on('data', function (data) {
+            finalData += data.toString();
+        });
+
+        response.on('end', function () {
+            if (response.statusCode !== 200) {
+                self.logger.error('Error while registering device');
+                self.logger.error(finalData);
+                return;
+            }
+
+            try {
+                var payload = JSON.parse(finalData);
+                callback(payload);
+            } catch (error) {
+                self.logger.error('Failed to parse message payload');
+                self.logger.error(error.stack || error);
+            }
+        });
+
+    });
+
+    request.on('error', function (error) {
+        self.logger.error('Error while logging in');
+        self.logger.error(error.stack || error);
+    });
+    
+    request.write(postData);
+    request.end();
 }
 
 /**
@@ -349,7 +456,7 @@ Client.prototype.updateHead = function (message) {
     })
 
     request.write(querystring.stringify({
-        secret: self.settings.secret
+        secret: self.settings.userSecret
       , message: message.id
     }) + '\n')
 
