@@ -3,9 +3,9 @@
 var PushoverDesktopClient = require('../index.js')
   , xdg = require('xdg')
   , mkdirp = require('mkdirp')
-  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json');
+  , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json')
 
-var settings = {};
+var settings = {}
 try {
     console.log('Attempting to load settings from', settingsPath)
     settings = require(settingsPath)
@@ -16,14 +16,14 @@ try {
 
 // New Pushover Open Client API: https://pushover.net/api/client
 
-// If the user has logged in already, and we have saved the details, we should have a USER_SECRET
-settings.userSecret = process.env.PUSHOVER_USER_SECRET || settings.userSecret;
+// If the user has logged in already, and we have saved the details, we should have a 
+settings.secret = process.env.PUSHOVER_SECRET || settings.secret;
 
-// If userSecret is missing, we need to login for the first time
-if (!settings.userSecret) {
-    doFirstLogin();
+// If secret is missing, we need to login for the first time
+if (!settings.secret) {
+    doFirstLogin()
 } else {
-    checkDeviceRegistration();
+    checkDeviceRegistration()
 }
 
 /**
@@ -51,7 +51,7 @@ function doFirstLogin() {
             process.exit(1);
         }
         // Save the User Secret
-        settings.userSecret = loginResponse.secret;
+        settings.secret = loginResponse.secret;
         // Discard the User Password
         settings.userPassword = null;
         

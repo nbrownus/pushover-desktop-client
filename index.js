@@ -9,7 +9,7 @@ var ws = require('ws')
  * Handles everything for showing Pushover notifications, just call #connect()
  *
  * @param {Object} settings Instance configuration
- * @param {String} settings.userSecret The user secret for your Pushover notification stream
+ * @param {String} settings.secret The user secret for your Pushover notification stream
  * @param {String} settings.deviceId The device id for your Pushover notification stream
  * @param {String} [settings.imageCache=null] Path to the image cache directory, used for app icons
  * @param {String} [settings.wsHost='wss://client.pushover.net/push'] Pushover websocket host to connect to
@@ -59,7 +59,7 @@ Client.prototype.connect = function () {
         self.refreshMessages()
         self.logger.log('Websocket client connected, waiting for new messages')
         self.resetKeepAlive()
-        wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.userSecret + '\n')
+        wsClient.send('login:' + self.settings.deviceId + ':' + self.settings.secret + '\n')
     })
 
     wsClient.on('message', function (event) {
@@ -143,7 +143,7 @@ Client.prototype.refreshMessages = function () {
         host: self.settings.apiHost
       , method: 'GET'
       , path: self.settings.apiPath + '/messages.json?' + querystring.stringify({
-            secret: self.settings.userSecret
+            secret: self.settings.secret
           , device_id: self.settings.deviceId
         })
     }
@@ -249,7 +249,7 @@ Client.prototype.register = function (deviceName, callback) {
     }
     
     var postData = querystring.stringify({
-        'secret' : self.settings.userSecret
+        'secret' : self.settings.secret
       , 'name' : deviceName
       , 'os' : 'O'
     })
@@ -456,7 +456,7 @@ Client.prototype.updateHead = function (message) {
     })
 
     request.write(querystring.stringify({
-        secret: self.settings.userSecret
+        secret: self.settings.secret
       , message: message.id
     }) + '\n')
 
