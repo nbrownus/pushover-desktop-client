@@ -185,107 +185,107 @@ Client.prototype.refreshMessages = function () {
  * Makes an https request to Pushover to get the client secret
  */
 Client.prototype.login = function (userEmail, userPassword, callback) {
-    var self = this;
+    var self = this
 
-    self.logger.log('Performing Login');
+    self.logger.log('Performing Login')
 
     var options = {
         host: self.settings.apiHost
       , method: 'POST'
       , path: self.settings.apiPath + '/users/login.json'
-    };
+    }
     
     var postData = querystring.stringify({
-        'email' : userEmail,
-        'password' : userPassword
-    });
+        'email' : userEmail
+      , 'password' : userPassword
+    })
 
     var request = self.https.request(options, function (response) {
-        var finalData = '';
+        var finalData = ''
 
         response.on('data', function (data) {
-            finalData += data.toString();
+            finalData += data.toString()
         });
 
         response.on('end', function () {
             if (response.statusCode !== 200) {
-                self.logger.error('Error while logging in');
-                self.logger.error(finalData);
-                return;
+                self.logger.error('Error while logging in')
+                self.logger.error(finalData)
+                return
             }
 
             try {
-                var payload = JSON.parse(finalData);
-                callback(payload);
+                var payload = JSON.parse(finalData)
+                callback(payload)
             } catch (error) {
-                self.logger.error('Failed to parse message payload');
-                self.logger.error(error.stack || error);
+                self.logger.error('Failed to parse message payload')
+                self.logger.error(error.stack || error)
             }
-        });
+        })
 
-    });
+    })
 
     request.on('error', function (error) {
-        self.logger.error('Error while logging in');
-        self.logger.error(error.stack || error);
+        self.logger.error('Error while logging in')
+        self.logger.error(error.stack || error)
     });
     
-    request.write(postData);
-    request.end();
+    request.write(postData)
+    request.end()
 }
 
 /**
  * Makes an https request to Pushover to register the device
  */
 Client.prototype.register = function (deviceName, callback) {
-    var self = this;
-
-    self.logger.log('Performing Device Registration');
+    var self = this
+    
+    self.settings.logger.log('Performing Device Registration')
 
     var options = {
         host: self.settings.apiHost
       , method: 'POST'
       , path: self.settings.apiPath + '/devices.json'
-    };
+    }
     
     var postData = querystring.stringify({
-        'secret' : self.settings.userSecret,
-        'name' : deviceName,
-        'os' : 'O'
-    });
+        'secret' : self.settings.userSecret
+      , 'name' : deviceName
+      , 'os' : 'O'
+    })
 
     var request = self.https.request(options, function (response) {
-        var finalData = '';
+        var finalData = ''
 
         response.on('data', function (data) {
-            finalData += data.toString();
-        });
+            finalData += data.toString()
+        })
 
         response.on('end', function () {
             if (response.statusCode !== 200) {
-                self.logger.error('Error while registering device');
-                self.logger.error(finalData);
-                return;
+                self.logger.error('Error while registering device')
+                self.logger.error(finalData)
+                return
             }
 
             try {
-                var payload = JSON.parse(finalData);
-                callback(payload);
+                var payload = JSON.parse(finalData)
+                callback(payload)
             } catch (error) {
-                self.logger.error('Failed to parse message payload');
-                self.logger.error(error.stack || error);
+                self.logger.error('Failed to parse message payload')
+                self.logger.error(error.stack || error)
             }
         });
 
     });
 
     request.on('error', function (error) {
-        self.logger.error('Error while logging in');
-        self.logger.error(error.stack || error);
+        self.logger.error('Error while logging in')
+        self.logger.error(error.stack || error)
     });
     
-    request.write(postData);
-    request.end();
+    request.write(postData)
+    request.end()
 }
 
 /**
