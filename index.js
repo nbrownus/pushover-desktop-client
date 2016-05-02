@@ -240,7 +240,7 @@ Client.prototype.login = function (userEmail, userPassword, callback) {
 Client.prototype.register = function (deviceName, callback) {
     var self = this
     
-    self.settings.logger.log('Performing Device Registration')
+    self.logger.log('Performing Device Registration')
 
     var options = {
         host: self.settings.apiHost
