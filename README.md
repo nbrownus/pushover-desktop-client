@@ -6,8 +6,8 @@
 notifications on your desktop. It uses [node-notifier](https://github.com/mikaelbr/node-notifier) so it should work
 with many different desktop notification providers on many different operating systems.
 
-This project uses the undocumented Pushover websocket API to receive updates about new notifications. You may need
-to pay to enable the [desktop service](https://pushover.net/clients/desktop) to use this project.
+This project uses the Pushover websocket API to receive updates about new notifications. You will need
+a license for the [desktop service](https://pushover.net/clients/desktop) to use this project.
 
 ### Using it
 
@@ -15,26 +15,23 @@ First install `pushover-desktop-client` globally with `npm`
 
     npm install -g pushover-desktop-client
 
-Then set up your settings file at `~/.config/pushover-dc/settings.json`
+The first time the client runs, it will need to login to Pushover and retrieve a User Secret that will be used for all 
+future connections.  For your first run, therefore, you must provide your username and password - either in a settings file, 
+or as environment variables (easier and more secure):
 
-    {
-        "secret": "secret obtained from pushover.net"
-      , "deviceId": "device id obtained from pushover.net"
-    }
+For example
 
+    PUSHOVER_USER_EMAIL=yourname@example.com PUSHOVER_USER_PASSWORD=password pushover-desktop-client
+    
+After the first run, the `secret` and `deviceId` needed for future authentication are saved in your settings file at `~/.config/pushover-dc/settings.json`
 You can override the location of the settings file with the `PUSHOVER_SETTINGS_PATH` environment variable.
 
 Alternatively you can use `PUSHOVER_DEVICE_ID`, `PUSHOVER_SECRET`, `PUSHOVER_IMAGE_CACHE` instead of using the settings
 file at all.
 
-Now you are ready to run:
+For all future executions, you just need to run:
 
     pushover-desktop-client
-
-### Finding Your deviceId and secret
-
-I had to find mine by viewing the source over at the [desktop web client](https://client.pushover.net). At the time they
-were at the bottom of the file in the variables `Pushover.deviceId` and `Pushover.userSecret`
 
 ### Running as a service on OSX
 

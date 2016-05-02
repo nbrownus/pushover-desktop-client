@@ -5,6 +5,7 @@ var PushoverDesktopClient = require('../index.js')
   , mkdirp = require('mkdirp')
   , settingsPath = process.env.PUSHOVER_SETTINGS_PATH || xdg.basedir.configPath('pushover-dc/settings.json')
 
+var settings = {}
 try {
     console.log('Attempting to load settings from', settingsPath)
     settings = require(settingsPath)
@@ -17,15 +18,117 @@ settings.deviceId = process.env.PUSHOVER_DEVICE_ID || settings.deviceId
 settings.secret = process.env.PUSHOVER_SECRET || settings.secret
 settings.imageCache = process.env.PUSHOVER_IMAGE_CACHE || settings.imageCache || xdg.basedir.cachePath('pushover-dc')
 
-if (!settings.deviceId || !settings.secret) {
-    console.error('A secret and deviceId must be provided!')
-    console.error('View the README at https://github.com/nbrownus/pushover-desktop-client for more info')
-    process.exit(1)
+// New Pushover Open Client API: https://pushover.net/api/client
+// We must have a user secret and a device id in order to connect
+if (!settings.secret) {
+    doFirstLogin()
+} else if (!settings.deviceId) {
+    doRegisterDevice()
+} else {
+    startClient()
 }
 
-console.log('Initializing image cache directory', settings.imageCache)
-mkdirp.sync(settings.imageCache, '0755')
+function startClient() {
+    console.log('Initializing image cache directory', settings.imageCache)
+    mkdirp.sync(settings.imageCache, '0755')
+    
+    var pdc = new PushoverDesktopClient(settings)
+    pdc.connect()
+}
 
-var pdc = new PushoverDesktopClient(settings)
+/**
+ * Execute the User Login process as per API:
+ * https://pushover.net/api/client#login
+ */
+function doFirstLogin() {
+    // Get User Email Address & Password - these can be set in the environment, or in the settings file
+    // Either way, they are never persisted to disk, and if they are already in the settings file, they
+    // are removed once the User Secret is retrieved.
+    settings.userEmail = process.env.PUSHOVER_USER_EMAIL || settings.userEmail
+    settings.userPassword = process.env.PUSHOVER_USER_PASSWORD || settings.userPassword
+    
+    // If either Email or Password is not set, we cannot login
+    if (!settings.userEmail || !settings.userPassword) {
+        console.error('Your Pushover Email Address and Password are required for the first login')
+        console.error('Please edit '+settingsPath+' or set PUSHOVER_USER_EMAIL and PUSHOVER_USER_PASSWORD in your environment')
+        process.exit(1)
+    }
+    
+    // Use the PushoverDesktopClient library to get the user secret
+    var pdc = new PushoverDesktopClient(settings)
+    pdc.login(settings.userEmail, settings.userPassword, function(loginResponse) {
+        // Pushover API returns status = 1 on success; other on error
+        if (loginResponse.status != 1) {
+            console.error('Login Failed: ')
+            console.error(JSON.stringify(loginResponse))
+            process.exit(1)
+        }
+        // Save the User Secret
+        settings.secret = loginResponse.secret
+        // Discard the User Email and Password
+        settings.userPassword = undefined
+        settings.userEmail = undefined
+        
+        // Persist the configuration data
+        console.log("Saving User Secret to Settings...")
+        saveSettings(checkDeviceRegistration)
+    })
+}
 
-pdc.connect()
+function saveSettings(nextFunction) {
+    // Persist the configuration data
+    var fs = require('fs')
+    var path = require('path')
+    
+    // If we're creating the Settings file for the first time, make sure the path exists
+    if (!fs.existsSync(settingsPath)) {
+        mkdirp.sync(path.dirname(settingsPath))
+    }
+    
+    fs.writeFile(settingsPath, JSON.stringify(settings, null, '\t'), function (err) {
+        if (err) {
+            console.log('There has been an error saving your configuration data.')
+            console.log(err.message)
+            return;
+        }
+        console.log('Configuration saved successfully.')
+        
+        nextFunction()
+    })
+}
+
+function checkDeviceRegistration() {
+    // If the deviceId is missing, we need to register the device for the first time
+    if (!settings.deviceId) {
+        doRegisterDevice(settings)
+    } else{ 
+        startClient(settings)
+    }
+}
+
+/**
+ * Execute the Device Registration process as per the API:
+ * https://pushover.net/api/client#register
+ */
+function doRegisterDevice() {
+    // Use the PushoverDesktopClient library to get the user secret
+    var pdc = new PushoverDesktopClient(settings)
+    pdc.register('pushover-desktop', function(registerResponse) {
+        // Pushover API returns status = 1 on success; other on error
+        if (registerResponse.status != 1) {
+            console.error('Device Registration Failed: ')
+            console.error(JSON.stringify(registerResponse))
+            process.exit(1)
+        }
+        // Save the Device ID
+        settings.deviceId = registerResponse.id
+
+        // Persist the configuration data
+        console.log("Saving DeviceId to Settings...")
+        saveSettings(startClient)
+    })
+}
+
+
+
+
