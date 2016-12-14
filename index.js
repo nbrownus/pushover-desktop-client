@@ -75,6 +75,10 @@ Client.prototype.connect = function () {
             self.resetKeepAlive()
             return
         }
+        //Keep-alive
+        else if (message === '#') {
+            return
+        }
 
         self.logger.error('Unknown message:', message)
         self.reconnect()
